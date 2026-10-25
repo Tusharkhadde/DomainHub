@@ -1,0 +1,7 @@
+{
+  "name": "domain-hub",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"", "dev:api": "npm --prefix backend run dev", "dev:web": "npm --prefix frontend run dev", "test": "npm --prefix backend test", "install:all": "npm install --prefix backend && npm install --prefix frontend"},
+  "devDependencies": {"concurrently": "^9.1.2"}
+}
