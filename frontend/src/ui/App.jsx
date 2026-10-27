@@ -1,5 +1,5 @@
 ﻿import React,{useEffect,useState} from 'react';
-import {Route,Routes,useNavigate} from 'react-router-dom';
+import {Route,Routes,useLocation,useNavigate} from 'react-router-dom';
 import {api} from '../api.js';
 import {Login} from './Auth.jsx';
 import {Layout} from './components.jsx';
@@ -9,8 +9,10 @@ import {Admin,Auctions,Dashboard,DNS,Domains,Listings,Orders,Search,Transfers} f
 export default function App(){
   const [user,setUser]=useState(null),[boot,setBoot]=useState(true);
   const navigate=useNavigate();
+  const location=useLocation();
   useEffect(()=>{api.get('/auth/me').then(setUser).catch(()=>{}).finally(()=>setBoot(false));},[]);
-  async function logout(){await api.post('/auth/logout');setUser(null);navigate('/');}
+  useEffect(()=>{const expireSession=()=>{setUser(null);navigate('/login',{replace:true,state:{from:location.pathname}})};window.addEventListener('domainhub:unauthorized',expireSession);return()=>window.removeEventListener('domainhub:unauthorized',expireSession)},[location.pathname,navigate]);
+  async function logout(){try{await api.post('/auth/logout')}finally{setUser(null);navigate('/')}}
   if(boot)return <div className="loading">Loading Domain Hub...</div>;
   if(!user)return <Routes>
     <Route path="/" element={<Landing/>}/>

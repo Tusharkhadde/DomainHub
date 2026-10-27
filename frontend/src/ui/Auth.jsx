@@ -15,8 +15,9 @@ export function Login({onLogin,mode='login'}){
     setBusy(true);
     const form=new FormData(event.currentTarget);
     try{
-      const user=await api.post(`/auth/${signup?'register':'login'}`,Object.fromEntries(form));
+      let user=await api.post(`/auth/${signup?'register':'login'}`,Object.fromEntries(form));
       if(signup)await api.post('/auth/login',{email:form.get('email'),password:form.get('password')});
+      try{user=await api.get('/auth/me')}catch{throw new Error('Sign-in succeeded, but the browser did not keep the session. Confirm the Vercel /api proxy is deployed, then try again.')}
       onLogin(user);
       navigate(location.state?.domain?'/search':'/',{replace:true,state:location.state?.domain?{domain:location.state.domain}:undefined});
     }catch(requestError){

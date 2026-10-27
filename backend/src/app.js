@@ -8,7 +8,7 @@ import {AppError} from './utils/errors.js';
 import {controller as c} from './controllers/apiController.js';
 
 const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
-const cookieOptions=()=>({httpOnly:true,secure:process.env.COOKIE_SECURE==='true',sameSite:process.env.COOKIE_SAME_SITE||'lax',maxAge:7200000,path:'/'});
+const cookieOptions=()=>({httpOnly:true,secure:process.env.NODE_ENV==='production'||process.env.COOKIE_SECURE==='true',sameSite:process.env.COOKIE_SAME_SITE||'lax',maxAge:7200000,path:'/'});
 export function createApp(){const app=express();app.use(helmet());app.use(cors({origin:process.env.FRONTEND_URL||'http://localhost:5173',credentials:true}));app.use(express.json({limit:'30kb'}));app.use(cookieParser());app.use('/api/auth',rateLimit({windowMs:60000,max:30}));
  app.get('/api/health',(req,res)=>res.json({data:{status:'ok'}}));
  app.post('/api/auth/register',asyncRoute(async(req,res)=>{const user=await c.registerUser(req.body);res.status(201).json({data:user});}));

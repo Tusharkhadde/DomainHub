@@ -34,10 +34,10 @@ The demo password is for local coursework only. All seeded users have bcrypt pas
 
 1. Create a Neon project and database in the Neon console, then copy its pooled or direct connection string.
 2. Run `backend/sql/schema.postgres.sql` in the Neon SQL Editor (or `psql`), then run `backend/sql/sample.postgres.sql` for the demo data.
-3. Set the backend environment to `DB_CLIENT=postgres`, `DATABASE_URL` to the SSL-enabled Neon connection string, a unique 32+ character `JWT_SECRET`, `NODE_ENV=production`, the public frontend origin in `FRONTEND_URL`, `COOKIE_SECURE=true`, and `COOKIE_SAME_SITE=none` when frontend and API are on separate sites. The adapter uses the existing `pg` dependency and enables TLS. Existing deployments may temporarily keep using `NEON_DATABASE_URL`, but should migrate to `DATABASE_URL`.
-4. Deploy the backend as a Node service with `backend` as the working directory and `npm start` as the start command. Deploy `frontend` as a static Vite site (`npm run build`, output directory `dist`). Configure `VITE_API_BASE_URL` to the deployed backend's `/api` URL, and configure the backend's `FRONTEND_URL` to the deployed frontend origin. Redeploy after setting environment variables.
+3. Set the backend environment to `DB_CLIENT=postgres`, `DATABASE_URL` to the SSL-enabled Neon connection string, a unique 32+ character `JWT_SECRET`, `NODE_ENV=production`, the public frontend origin in `FRONTEND_URL`, `COOKIE_SECURE=true`, and `COOKIE_SAME_SITE=lax`. The adapter uses the existing `pg` dependency and enables TLS. Existing deployments may temporarily keep using `NEON_DATABASE_URL`, but should migrate to `DATABASE_URL`.
+4. Deploy the backend as a Node service with `backend` as the working directory and `npm start` as the start command. Deploy `frontend` as a Vite static site (`npm run build`, output directory `dist`). `frontend/vercel.json` proxies same-origin `/api` requests to the Render API; do not set `VITE_API_BASE_URL` to the Render URL. Login verifies the session before opening the dashboard. Redeploy both services after adding the proxy and updating Render cookie settings.
 
-For local MySQL cookies, use `COOKIE_SECURE=false` and `COOKIE_SAME_SITE=lax`. API cookies are HttpOnly. Cross-site cookies require HTTPS and `SameSite=None`.
+For local MySQL cookies, use `COOKIE_SECURE=false` and `COOKIE_SAME_SITE=lax`. API cookies are HttpOnly. Local Vite development proxies `/api` to `http://localhost:4000`; production Vercel uses the same path to proxy to Render.
 
 ## Business rules
 
