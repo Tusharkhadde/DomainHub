@@ -37,4 +37,5 @@ export function createApp(){const app=express();app.use(helmet());app.use(cors({
  app.get('/api/admin/tlds',auth,admin,asyncRoute(async(req,res)=>res.json({data:await c.tldList()})));
  app.put('/api/admin/tlds/:id',auth,admin,asyncRoute(async(req,res)=>res.json({data:await c.updateTld(req.params.id,req.body)})));
  app.get('/api/admin/orders',auth,admin,asyncRoute(async(req,res)=>res.json({data:await c.orders(req.user.id,true)})));
+ app.use('/api',(req,res)=>res.status(404).json({error:'API endpoint not found'}));
  app.use((err,req,res,next)=>{const status=err instanceof AppError?err.status:500;if(status===500)console.error(err.message);res.status(status).json({error:status===500?'Internal server error':err.message});});return app;}
