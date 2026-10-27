@@ -1,15 +1,27 @@
 import mysql from 'mysql2/promise';
 import pg from 'pg';
 
-const client = process.env.DB_CLIENT;
+let client;
 let pool;
+
+function configuredClient() {
+  const configured = process.env.DB_CLIENT;
+  if (configured) return configured;
+  return process.env.DATABASE_URL || process.env.NEON_DATABASE_URL ? 'postgres' : 'mysql';
+}
+
 export function initDb() {
+  client = configuredClient();
   if (client === 'mysql') pool = mysql.createPool({host:process.env.MYSQL_HOST,port:Number(process.env.MYSQL_PORT||3306),user:process.env.MYSQL_USER,password:process.env.MYSQL_PASSWORD,database:process.env.MYSQL_DATABASE,waitForConnections:true,connectionLimit:10,decimalNumbers:false});
-  else if (client === 'postgres') pool = new pg.Pool({connectionString:process.env.NEON_DATABASE_URL,ssl:{rejectUnauthorized:false}});
+  else if (client === 'postgres') {
+    const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+    if (!connectionString) throw new Error('Missing required environment variable: DATABASE_URL');
+    pool = new pg.Pool({connectionString,ssl:{rejectUnauthorized:false}});
+  }
   else throw new Error('DB_CLIENT must be mysql or postgres');
   return pool;
 }
-export function dialect(){return client;}
+export function dialect(){return client || configuredClient();}
 function normalize(sql){return client==='postgres'?sql.replace(/\?/g,()=>`$${++normalize.n}`):sql;}
 export async function query(sql, params=[]){
   if(client==='mysql'){const [rows]=await pool.execute(sql,params);return rows;}
