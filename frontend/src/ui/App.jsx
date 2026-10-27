@@ -3,6 +3,7 @@ import {Route,Routes,useNavigate} from 'react-router-dom';
 import {api} from '../api.js';
 import {Login} from './Auth.jsx';
 import {Layout} from './components.jsx';
+import {Landing} from './Landing.jsx';
 import {Admin,Auctions,Dashboard,DNS,Domains,Listings,Orders,Search,Transfers} from './pages.jsx';
 
 export default function App(){
@@ -11,7 +12,12 @@ export default function App(){
   useEffect(()=>{api.get('/auth/me').then(setUser).catch(()=>{}).finally(()=>setBoot(false));},[]);
   async function logout(){await api.post('/auth/logout');setUser(null);navigate('/');}
   if(boot)return <div className="loading">Loading Domain Hub...</div>;
-  if(!user)return <Login onLogin={setUser}/>;
+  if(!user)return <Routes>
+    <Route path="/" element={<Landing/>}/>
+    <Route path="/login" element={<Login onLogin={setUser} mode="login"/>}/>
+    <Route path="/register" element={<Login onLogin={setUser} mode="register"/>}/>
+    <Route path="*" element={<Landing/>}/>
+  </Routes>;
   return <Layout user={user} onLogout={logout}><Routes>
     <Route path="/" element={<Dashboard/>}/>
     <Route path="/search" element={<Search/>}/>
@@ -28,4 +34,3 @@ export default function App(){
     <Route path="*" element={<Dashboard/>}/>
   </Routes></Layout>;
 }
-

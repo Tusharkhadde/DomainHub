@@ -1,6 +1,8 @@
 # Domain Hub
 
-A small domain registrar and auction app built with React, Vite, Express, and direct SQL. The frontend calls the REST API; it never connects to a database. The app uses nine tables and has MySQL (local) and PostgreSQL (Neon) schema variants.
+Domain Hub is a domain-management and auction demo built with React, Vite, Express, and direct SQL. Its public landing page explains the workspace and lets visitors search app records before signing up. The frontend calls the REST API; it never connects to a database. The app uses nine tables and has MySQL (local) and PostgreSQL (Neon) schema variants.
+
+Domain search checks the application's own database and configured TLD prices; it does not query an external registrar or confirm availability across public registries. Registrations and payments are also modeled in the app rather than processed by external services.
 
 ## Prerequisites and local setup
 
@@ -18,7 +20,7 @@ npm --prefix frontend install
 npm run dev
 ```
 
-The frontend is at `http://localhost:5173`; the API is at `http://localhost:4000/api`. To run checks, use `npm --prefix backend test` and `npm --prefix frontend run build`.
+The frontend is at `http://localhost:5173`; the API is at `http://localhost:4000/api`. Visitors can use the landing page at `/`, sign in at `/login`, and create an account at `/register`. To run checks, use `npm --prefix backend test` and `npm --prefix frontend run build`.
 
 Demo logins (the sample password is `DomainHub123!`):
 
@@ -82,4 +84,4 @@ Tables: `users`, `tlds`, `domains`, `orders`, `payments`, `dns_records`, `transf
 
 ## Verification notes
 
-The domain status unit tests cover all seven requested day boundaries. Backend integration tests need a reachable MySQL instance and seeded schema. In an environment without configured MySQL credentials or a Neon URL, those database scenarios and PostgreSQL runtime flows cannot be honestly reported as verified. Run the two schema/sample scripts first, set environment variables, then exercise the API. The current UI is intentionally plain, responsive, and uses standard CSS.
+The domain status unit tests cover all seven requested day boundaries. Backend integration tests need a reachable MySQL instance and seeded schema. In an environment without configured MySQL credentials or a Neon URL, those database scenarios and PostgreSQL runtime flows cannot be honestly reported as verified. Run the two schema/sample scripts first, set environment variables, then exercise the API. The responsive frontend includes a public marketing landing page, domain search entry point, sign-in/sign-up screens, and the authenticated management dashboard.
