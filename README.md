@@ -45,7 +45,7 @@ For local MySQL cookies, use `COOKIE_SECURE=false` and `COOKIE_SAME_SITE=lax`. A
 - Registration reads the current TLD price and inserts domain, order, and simulated payment in one transaction. The unique `(name, extension)` key and transactional lookup protect concurrent attempts. Set `SIMULATE_PAYMENT_FAILURE=true` to force payment failure; the transaction rolls back.
 - Renewal is for one year and extends from the current expiry while active, expiring, or in grace; expired domains cannot renew. Auctioned domains cannot renew or transfer. `SIMULATE_PAYMENT_FAILURE=true` also rolls back renewal and auction settlement.
 - DNS and transfer operations check ownership on the server. Transfers require the receiver to be an existing account and remain pending until that account accepts/rejects.
-- Auctions use row locks when bidding and settling. There is no scheduler: loading auction lists or auction endpoints processes ended auctions. A no-bid auction closes UNSOLD; successful settlement creates a purchase order/payment and changes ownership in a transaction.
+- Auctions use row locks when bidding and settling. The API settles ended auctions once at startup and every 60 seconds by default; set `AUCTION_SETTLEMENT_INTERVAL_MS` to change the interval (minimum 1000 ms). Auction endpoints also process ended auctions. A no-bid auction closes UNSOLD; successful settlement creates a purchase order/payment and changes ownership in a transaction. If the API process is stopped or suspended, settlement resumes when it starts again.
 - Payment is simulated; no card details or external processor are used. Prices are stored as decimal values.
 
 ## API outline
