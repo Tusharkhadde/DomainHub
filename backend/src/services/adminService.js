@@ -12,7 +12,7 @@ export async function adminSummary(){
     query("SELECT COUNT(*) count FROM auctions WHERE status='LIVE'"),
     query("SELECT COUNT(*) count FROM auctions WHERE status IN ('CLOSED','UNSOLD')")
   ]);
-  return {revenue:money(revenue[0].revenue),payments,expiringDomains:expiring,liveAuctions:Number(live[0].count),closedAuctions:Number(closed[0].count)};
+  return {revenue:money(revenue[0]?.revenue||0),payments,expiringDomains:expiring,liveAuctions:Number(live[0]?.count||0),closedAuctions:Number(closed[0]?.count||0)};
 }
 
 export async function updateTld(id,prices){
