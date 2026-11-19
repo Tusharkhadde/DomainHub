@@ -1,5 +1,11 @@
 import mysql from 'mysql2/promise';
 import pg from 'pg';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Parse int8 (BIGINT) as Number in JS so IDs and counts match MySQL behavior
 pg.types.setTypeParser(20, (val) => val === null ? null : Number(val));
@@ -8,6 +14,7 @@ pg.types.setTypeParser(1082, (val) => val);
 
 let client;
 let pool;
+let sqliteDb;
 
 function configuredClient() {
   const configured = process.env.DB_CLIENT;
@@ -15,7 +22,17 @@ function configuredClient() {
   return process.env.DATABASE_URL || process.env.NEON_DATABASE_URL ? 'postgres' : 'mysql';
 }
 
-export function initDb() {
+async function initSqlite() {
+  const {DatabaseSync} = await import('node:sqlite');
+  const dataDir = path.resolve(__dirname, '../../data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, {recursive: true});
+  const dbPath = path.join(dataDir, 'domain_hub.sqlite');
+  sqliteDb = new DatabaseSync(dbPath);
+  sqliteDb.exec('PRAGMA foreign_keys = ON;');
+  pool = sqliteDb;
+}
+
+export async function initDb() {
   client = configuredClient();
   if (client === 'mysql') {
     pool = mysql.createPool({
@@ -31,10 +48,18 @@ export function initDb() {
     });
   } else if (client === 'postgres') {
     const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
-    if (!connectionString) throw new Error('Missing required environment variable: DATABASE_URL');
+    if (!connectionString) {
+      console.log('\n[db] DATABASE_URL is not set. Using built-in local SQLite storage.');
+      console.log('[db] When ready to use Neon, add DATABASE_URL=postgresql://... in backend/.env\n');
+      client = 'sqlite';
+      await initSqlite();
+      return pool;
+    }
     pool = new pg.Pool({connectionString, ssl: {rejectUnauthorized: false}});
+  } else if (client === 'sqlite') {
+    await initSqlite();
   } else {
-    throw new Error('DB_CLIENT must be mysql or postgres');
+    throw new Error('DB_CLIENT must be mysql, postgres, or sqlite');
   }
   return pool;
 }
@@ -53,16 +78,64 @@ function normalize(sql) {
   return sql.replace(/\?/g, () => `$${++n}`);
 }
 
+function cleanSqliteSql(sql) {
+  return sql.replace(/\s+FOR\s+UPDATE/gi, '');
+}
+
 export async function query(sql, params = []) {
   if (client === 'mysql') {
     const [rows] = await pool.execute(sql, params);
     return rows;
+  }
+  if (client === 'sqlite') {
+    const cleaned = cleanSqliteSql(sql);
+    const upper = cleaned.trim().toUpperCase();
+    if (upper.startsWith('SELECT')) {
+      const stmt = sqliteDb.prepare(cleaned);
+      const rows = stmt.all(...params);
+      return rows.map(r => ({...r}));
+    }
+    const stmt = sqliteDb.prepare(cleaned);
+    const res = stmt.run(...params);
+    return {affectedRows: res.changes, insertId: Number(res.lastInsertRowid)};
   }
   const result = await pool.query(normalize(sql), params);
   return result.rows;
 }
 
 export async function transaction(work) {
+  if (client === 'sqlite') {
+    sqliteDb.exec('BEGIN IMMEDIATE');
+    const tx = {
+      query: async (sql, params = []) => {
+        const cleaned = cleanSqliteSql(sql);
+        const upper = cleaned.trim().toUpperCase();
+        if (upper.startsWith('SELECT')) {
+          const stmt = sqliteDb.prepare(cleaned);
+          const rows = stmt.all(...params);
+          return rows.map(r => ({...r}));
+        }
+        const stmt = sqliteDb.prepare(cleaned);
+        const res = stmt.run(...params);
+        return {affectedRows: res.changes, insertId: Number(res.lastInsertRowid)};
+      },
+      insert: async (sql, params = []) => {
+        const cleaned = cleanSqliteSql(sql);
+        const stmt = sqliteDb.prepare(cleaned);
+        const res = stmt.run(...params);
+        return Number(res.lastInsertRowid);
+      }
+    };
+    try {
+      const out = await work(tx);
+      sqliteDb.exec('COMMIT');
+      return out;
+    } catch (e) {
+      try { sqliteDb.exec('ROLLBACK'); } catch {}
+      throw e;
+    }
+  }
+
   const conn = client === 'mysql' ? await pool.getConnection() : await pool.connect();
   const tx = {
     query: async (sql, params = []) => {
@@ -103,5 +176,9 @@ export async function transaction(work) {
 }
 
 export async function closeDb() {
+  if (client === 'sqlite') {
+    sqliteDb?.close();
+    return;
+  }
   await pool?.end();
 }

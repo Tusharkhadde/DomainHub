@@ -21,15 +21,11 @@ if (dbClient === 'mysql') {
   required.push('MYSQL_HOST', 'MYSQL_USER', 'MYSQL_DATABASE');
 } else if (dbClient === 'postgres') {
   if (!process.env.DATABASE_URL && !process.env.NEON_DATABASE_URL) {
-    console.error('\n' + '='.repeat(64));
-    console.error('Domain Hub Notice: DATABASE_URL is not set.');
-    console.error('Please configure your Neon PostgreSQL database URL in backend/.env:');
-    console.error('DATABASE_URL=postgresql://user:password@ep-xyz.neon.tech/domain_hub?sslmode=require');
-    console.error('=' .repeat(64) + '\n');
-    required.push('DATABASE_URL');
+    console.log('[DomainHub] Notice: No DATABASE_URL set. Running with built-in SQLite engine so all features work immediately out of the box.');
+    console.log('[DomainHub] To connect your Neon Cloud DB anytime, paste DATABASE_URL in backend/.env.');
   }
-} else {
-  throw new Error('DB_CLIENT must be mysql or postgres');
+} else if (dbClient !== 'sqlite') {
+  throw new Error('DB_CLIENT must be mysql, postgres, or sqlite');
 }
 
 for (const key of required) {
@@ -42,7 +38,7 @@ if (process.env.JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET must contain at least 32 characters');
 }
 
-initDb();
+await initDb();
 
 try {
   await ensureSchema();
